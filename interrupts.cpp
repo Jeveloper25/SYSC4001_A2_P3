@@ -140,30 +140,105 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 
 
 	} else if(activity == "EXEC") {
-	    auto [intr, time] = intr_boilerplate(current_time, 3, 10, vectors);
+		// E requirement
+		auto [intr, time] = intr_boilerplate(current_time, 3, 10, vectors);
 	    current_time = time;
 	    execution += intr;
 
 	    ///////////////////////////////////////////////////////////////////////////////////////////
 	    //Add your EXEC output here
 		
+        // search for the program in external_files
+		// F requirement
+        unsigned int program_size = 0;
+        bool program_found = false;
+        for (const auto& file : external_files) {
+            if (file.program_name == program_name) {
+                // program found
+                program_size = file.size;
+                program_found = true;
+                break;
+            }
+        }
 
+        if (!program_found) {
+            // output for program not found
+            execution += std::to_string(current_time) + ", 1, ERROR: Program " + program_name + " not found in external files\n";
+            current_time += 1;
+        } else {
+            // exec output logic for program when found
+            execution += std::to_string(current_time) + ", " + std::to_string(duration_intr) + ", Program is " + std::to_string(program_size) + " MB large\n";
+            current_time += duration_intr;
+
+            // freeing current partition
+            free_memory(&current);
+            execution += std::to_string(current_time) + ", 1, free current partition\n";
+            current_time += 1;
+
+            // update PCB
+            current.program_name = program_name;
+            current.size = program_size;
+            current.partition_number = -1;
+
+            // allocate memory
+            // G requirement
+            if (allocate_memory(&current)) {
+                execution += std::to_string(current_time) + ", 1, allocate partition " + std::to_string(current.partition_number) + " for " + program_name + "\n";
+                current_time += 1;
+
+                // H requirement
+				int load_time = program_size * 15; // assumption in assignment (15ms for every MB)
+                execution += std::to_string(current_time) + ", " + std::to_string(load_time) + ", loading " + program_name + " into memory\n";
+                current_time += load_time;
+
+                // I requirement
+                execution += std::to_string(current_time) + ", 1, partition " + std::to_string(current.partition_number) + " marked as occupied\n";
+                current_time += 1;
+
+                // J requirement
+                execution += std::to_string(current_time) + ", 1, update PCB with new program info\n";
+                current_time += 1;
+
+                // K requirment
+                execution += std::to_string(current_time) + ", 1, " + "scheduler called\n";
+                current_time += 1;
+                execution += std::to_string(current_time) + ", 1, IRET\n";
+                current_time += 1;  
+
+            } else {
+                // no partition found
+                execution += std::to_string(current_time) + ", 1, ERROR: no partition available for " + program_name + " (size: " + std::to_string(program_size) + "MB)\n";
+                current_time += 1;
+            }
+        }
 
 	    ///////////////////////////////////////////////////////////////////////////////////////////
 
-		// FROM KEON: Added the relative path of the program, to use the program of a different test case just change the number after test. If it doesn't work just let me know.
-	    std::ifstream exec_trace_file("input_files/test1/" + program_name + ".txt");
+		//FROM KEON: Added the relative path of the program, to use the program of a different test case just change the number after test. If it doesn't work just let me know.
+	    
+		std::ifstream exec_trace_file("input_files/test1/" + program_name + ".txt");
 
 	    std::vector<std::string> exec_traces;
 	    std::string exec_trace;
 	    while(std::getline(exec_trace_file, exec_trace)) {
-		exec_traces.push_back(exec_trace);
+			exec_traces.push_back(exec_trace);
 	    }
+
+		exec_trace_file.close();
 
 	    ///////////////////////////////////////////////////////////////////////////////////////////
 	    //With the exec's trace (i.e. trace of external program), run the exec (HINT: think recursion)
+		
+		current.program_name = program_name;
+		system_status += "time: " + std::to_string(current_time) + "; current trace: EXEC, " + program_name;
+		system_status += print_PCB(current, wait_queue);
+		
+		// I requirment
+		auto [exec_exec, exec_status, exec_time] = simulate_trace(exec_traces, current_time, vectors, delays, external_files, current, wait_queue);
 
-
+		execution += exec_exec;
+        system_status += exec_status;
+		current_time = exec_time;
 
 	    ///////////////////////////////////////////////////////////////////////////////////////////
 
