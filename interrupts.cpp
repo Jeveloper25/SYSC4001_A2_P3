@@ -27,7 +27,7 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 	    current_time += duration_intr;
 
 	} else if(activity == "SYSCALL") { //As per Assignment 1
-	int device_number = duration_intr - 1;
+	int device_number = duration_intr;
 		if (device_number >= std::min(delays.size(), vectors.size()) || device_number< 0) {
 			std::cout << "Line "<< line_number << "\nInvalid device number: " << device_number
 			<< "\nDevice number must be between 0 and " << std::min(delays.size(), vectors.size()) << std::endl;
@@ -37,17 +37,17 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 		    current_time = time;
 			execution += intr;
 			int isr_duration = delays.at(device_number);
-			execution += std::to_string(time) + ", " + std::to_string(ISR_ACTIVITY_TIME) + ", " + "SYSCALL: run the ISR (device driver)\n";
-			time += ISR_ACTIVITY_TIME;
-			execution += std::to_string(time) + ", " + std::to_string(ISR_ACTIVITY_TIME) + ", " + "transfer data from device to memory\n";
-			time += ISR_ACTIVITY_TIME;
+			execution += std::to_string(current_time) + ", " + std::to_string(ISR_ACTIVITY_TIME) + ", " + "SYSCALL: run the ISR (device driver)\n";
+			current_time += ISR_ACTIVITY_TIME;
+			execution += std::to_string(current_time) + ", " + std::to_string(ISR_ACTIVITY_TIME) + ", " + "transfer data from device to memory\n";
+			current_time += ISR_ACTIVITY_TIME;
 		if (3 * ISR_ACTIVITY_TIME < isr_duration) {
-			int remaining_time = (isr_duration - ISR_ACTIVITY_TIME);
-			execution += std::to_string(time) + ", " + std::to_string(remaining_time) + ", " + "check for errors\n";
-			time += remaining_time;
+			int remaining_time = (isr_duration - 2 * ISR_ACTIVITY_TIME);
+			execution += std::to_string(current_time) + ", " + std::to_string(remaining_time) + ", " + "check for errors\n";
+			current_time += remaining_time;
 		} else {
-			execution += std::to_string(time) + ", " + std::to_string(ISR_ACTIVITY_TIME) + ", " + "check for errors\n";
-			time += ISR_ACTIVITY_TIME;
+			execution += std::to_string(current_time) + ", " + std::to_string(ISR_ACTIVITY_TIME) + ", " + "check for errors\n";
+			current_time += ISR_ACTIVITY_TIME;
 		}
 		    execution +=  std::to_string(current_time) + ", 1, IRET\n";
 		    current_time += 1;
@@ -130,11 +130,18 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 		PCB child_pcb = current;
 		child_pcb.PPID = child_pcb.PID;
 		child_pcb.PID++;
+		if (!allocate_memory(&child_pcb)) {
+			execution += std::to_string(current_time) + ", 1, ERROR: no partition available for child (size: " + std::to_string(child_pcb.size) + "MB)\n";
+			current_time += 1;
+			}
 		wait_queue.push_back(current);
-		system_status += "time: " + std::to_string(current_time) + "; current trace: FORK, " + std::to_string(duration_intr);
+		system_status += "time: " + std::to_string(current_time) + "; current trace: FORK, " + std::to_string(duration_intr) + "\n";
 		system_status += print_PCB(child_pcb, wait_queue);
-		simulate_trace(child_trace, current_time, vectors, delays, external_files, child_pcb, wait_queue);
-
+		auto [child_exec, child_status, child_time] = simulate_trace(child_trace, current_time, vectors, delays, external_files, child_pcb, wait_queue);
+		execution += child_exec;
+		system_status += child_status;
+		current_time = child_time;
+		wait_queue.pop_back();
 
 	    ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -187,7 +194,7 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
                 current_time += 1;
 
                 // H requirement
-				int load_time = program_size * 15; // assumption in assignment (15ms for every MB)
+		int load_time = program_size * 15; // assumption in assignment (15ms for every MB)
                 execution += std::to_string(current_time) + ", " + std::to_string(load_time) + ", loading " + program_name + " into memory\n";
                 current_time += load_time;
 
@@ -196,12 +203,11 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
                 current_time += 1;
 
                 // J requirement
-                execution += std::to_string(current_time) + ", 1, update PCB with new program info\n";
-                current_time += 1;
+                execution += std::to_string(current_time) + ", 6, update PCB with new program info\n";
+                current_time += 6;
 
                 // K requirment
-                execution += std::to_string(current_time) + ", 1, " + "scheduler called\n";
-                current_time += 1;
+                execution += std::to_string(current_time) + ", 0, " + "scheduler called\n";
                 execution += std::to_string(current_time) + ", 1, IRET\n";
                 current_time += 1;  
 
@@ -214,7 +220,7 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 
 	    ///////////////////////////////////////////////////////////////////////////////////////////
 
-		//FROM KEON: Added the relative path of the program, to use the program of a different test case just change the number after test. If it doesn't work just let me know.
+		//FROM KEON: Added the relative path of the program, to use the program of a different test case just change the number after test.
 	    
 		std::ifstream exec_trace_file("input_files/test1/" + program_name + ".txt");
 
@@ -230,7 +236,7 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 	    //With the exec's trace (i.e. trace of external program), run the exec (HINT: think recursion)
 		
 		current.program_name = program_name;
-		system_status += "time: " + std::to_string(current_time) + "; current trace: EXEC, " + program_name;
+		system_status += "time: " + std::to_string(current_time) + "; current trace: EXEC, " + program_name + "\n";
 		system_status += print_PCB(current, wait_queue);
 		
 		// I requirment
