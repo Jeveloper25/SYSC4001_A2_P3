@@ -14,6 +14,7 @@
 
 #define ADDR_BASE   0
 #define VECTOR_SIZE 2
+#define ISR_ACTIVITY_TIME 40
 
 struct memory_partition_t {
     const unsigned int partition_number;
