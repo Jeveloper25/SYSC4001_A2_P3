@@ -151,8 +151,8 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 
 	    ///////////////////////////////////////////////////////////////////////////////////////////
 
-
-	    std::ifstream exec_trace_file(program_name + ".txt");
+		// FROM KEON: Added the relative path of the program, to use the program of a different test case just change the number after test. If it doesn't work just let me know.
+	    std::ifstream exec_trace_file("input_files/test1/" + program_name + ".txt");
 
 	    std::vector<std::string> exec_traces;
 	    std::string exec_trace;
