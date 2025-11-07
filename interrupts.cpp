@@ -35,7 +35,6 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 		    auto [intr, time] = intr_boilerplate(current_time, duration_intr, 10, vectors);
 		    execution += intr;
 		    current_time = time;
-			execution += intr;
 			int isr_duration = delays.at(device_number);
 			execution += std::to_string(current_time) + ", " + std::to_string(ISR_ACTIVITY_TIME) + ", " + "SYSCALL: run the ISR (device driver)\n";
 			current_time += ISR_ACTIVITY_TIME;
@@ -53,7 +52,7 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 		    current_time += 1;
 
 	} else if(activity == "END_IO") {
-	int device_number = duration_intr - 1;
+	int device_number = duration_intr;
 		if (device_number >= std::min(delays.size(), vectors.size()) || device_number < 0) {
 			std::cout << "Line "<< line_number << "\nInvalid device number: " << device_number
 			<< "\nDevice number must be between 0 and " << std::min(delays.size(), vectors.size()) << std::endl;
@@ -61,17 +60,16 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 	    auto [intr, time] = intr_boilerplate(current_time, duration_intr, 10, vectors);
 	    current_time = time;
 	    execution += intr;
-		execution += intr; 
 		int isr_duration = delays.at(device_number);
-		execution += std::to_string(time) + ", " + std::to_string(ISR_ACTIVITY_TIME) + ", " + "ENDIO: run the ISR (device driver)\n";
-		time += ISR_ACTIVITY_TIME;
+		execution += std::to_string(current_time) + ", " + std::to_string(ISR_ACTIVITY_TIME) + ", " + "ENDIO: run the ISR (device driver)\n";
+		current_time += ISR_ACTIVITY_TIME;
 		if (ISR_ACTIVITY_TIME * 2 < isr_duration) {
 			int remaining_time = (isr_duration - ISR_ACTIVITY_TIME);
-			execution += std::to_string(time) + ", " + std::to_string(remaining_time) + ", " + "check device status\n";
-			time += remaining_time;
+			execution += std::to_string(current_time) + ", " + std::to_string(remaining_time) + ", " + "check device status\n";
+			current_time += remaining_time;
 		} else {
-			execution += std::to_string(time) + ", " + std::to_string(ISR_ACTIVITY_TIME) + ", " + "check device status\n";
-			time += ISR_ACTIVITY_TIME;
+			execution += std::to_string(current_time) + ", " + std::to_string(ISR_ACTIVITY_TIME) + ", " + "check device status\n";
+			current_time += ISR_ACTIVITY_TIME;
 		}
 	    execution +=  std::to_string(current_time) + ", 1, IRET\n";
 	    current_time += 1;
@@ -223,7 +221,7 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
 
 		//FROM KEON: Added the relative path of the program, to use the program of a different test case just change the number after test.
 	    
-		std::ifstream exec_trace_file("input_files/test2/" + program_name + ".txt");
+		std::ifstream exec_trace_file("input_files/test5/" + program_name + ".txt");
 
 	    std::vector<std::string> exec_traces;
 	    std::string exec_trace;
