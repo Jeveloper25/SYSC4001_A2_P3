@@ -34,10 +34,6 @@
 621, 10, context saved
 631, 1, find vector 4 in memory position 0x0008
 632, 1, load address 0X0292 into the PC
-620, 1, switch to kernel mode
-621, 10, context saved
-631, 1, find vector 4 in memory position 0x0008
-632, 1, load address 0X0292 into the PC
 633, 40, SYSCALL: run the ISR (device driver)
 673, 40, transfer data from device to memory
 713, 170, check for errors
